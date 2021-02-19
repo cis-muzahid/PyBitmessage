@@ -640,8 +640,6 @@ class MyForm(settingsmixin.SMainWindow):
                     BMConfigParser().remove_section(addressInKeysFile)
                     BMConfigParser().save()
 
-        self.updateStartOnLogon()
-
         self.change_translation()
 
         # e.g. for editing labels
@@ -826,6 +824,7 @@ class MyForm(settingsmixin.SMainWindow):
         self.sqlInit()
         self.indicatorInit()
         self.notifierInit()
+        self.updateStartOnLogon()
 
         self.ui.updateNetworkSwitchMenuLabel()
 
@@ -844,26 +843,28 @@ class MyForm(settingsmixin.SMainWindow):
             self._contact_selected = None
 
     def updateStartOnLogon(self):
-        # Configure Bitmessage to start on startup (or remove the
-        # configuration) based on the setting in the keys.dat file
-        if 'win32' in sys.platform or 'win64' in sys.platform:
-            # Auto-startup for Windows
+        """
+        Configure Bitmessage to start on startup (or remove the
+        configuration) based on the setting in the keys.dat file
+        """
+        startonlogon = BMConfigParser().safeGetBoolean(
+            'bitmessagesettings', 'startonlogon')
+        if sys.platform.startswith('win'):  # Auto-startup for Windows
             RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-            self.settings = QtCore.QSettings(
+            settings = QtCore.QSettings(
                 RUN_PATH, QtCore.QSettings.NativeFormat)
             # In case the user moves the program and the registry entry is
             # no longer valid, this will delete the old registry entry.
-            self.settings.remove("PyBitmessage")
-            if BMConfigParser().getboolean(
-                    'bitmessagesettings', 'startonlogon'
-            ):
-                self.settings.setValue("PyBitmessage", sys.argv[0])
-        elif 'darwin' in sys.platform:
-            # startup for mac
-            pass
-        elif 'linux' in sys.platform:
-            # startup for linux
-            pass
+            if startonlogon:
+                settings.setValue("PyBitmessage", sys.argv[0])
+            else:
+                settings.remove("PyBitmessage")
+        else:
+            try:  # get desktop plugin if any
+                self.desktop = get_plugin('desktop')()
+                self.desktop.adjust_startonlogon(startonlogon)
+            except (NameError, TypeError):
+                self.desktop = False
 
     def updateTTL(self, sliderPosition):
         TTL = int(sliderPosition ** 3.199 + 3600)
@@ -1423,9 +1424,11 @@ class MyForm(settingsmixin.SMainWindow):
     def sqlInit(self):
         register_adapter(QtCore.QByteArray, str)
 
-    # Try init the distro specific appindicator,
-    # for example the Ubuntu MessagingMenu
     def indicatorInit(self):
+        """
+        Try init the distro specific appindicator,
+        for example the Ubuntu MessagingMenu
+        """
         def _noop_update(*args, **kwargs):
             pass
 

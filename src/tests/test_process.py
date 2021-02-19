@@ -12,13 +12,10 @@ import unittest
 
 import psutil
 
-from common import cleanup
+from .common import cleanup, put_signal_file, skip_python3
 
 
-def put_signal_file(path, filename):
-    """Creates file, presence of which is a signal about some event."""
-    with open(os.path.join(path, filename), 'wb') as outfile:
-        outfile.write(str(time.time()))
+skip_python3()
 
 
 class TestProcessProto(unittest.TestCase):
@@ -197,6 +194,19 @@ class TestProcess(TestProcessProto):
     def test_process_name(self):
         """Check PyBitmessage process name"""
         self.assertEqual(self.process.name(), 'PyBitmessage')
+
+    @unittest.skipIf(psutil.version_info < (4, 0), 'psutil is too old')
+    def test_home(self):
+        """Ensure BITMESSAGE_HOME is used by process"""
+        self.assertEqual(
+            self.process.environ().get('BITMESSAGE_HOME'), self.home)
+
+    def test_listening(self):
+        """Check that pybitmessage listens on port 8444"""
+        for c in self.process.connections():
+            if c.status == 'LISTEN':
+                self.assertEqual(c.laddr[1], 8444)
+                break
 
     def test_files(self):
         """Check existence of PyBitmessage files"""

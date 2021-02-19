@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python
 """
 The PyBitmessage startup script
 """
@@ -12,10 +12,11 @@ The PyBitmessage startup script
 import os
 import sys
 
-app_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(app_dir)
-sys.path.insert(0, app_dir)
-
+try:
+    import pathmagic
+except ImportError:
+    from pybitmessage import pathmagic
+app_dir = pathmagic.setup()
 
 import depends
 depends.check_dependencies()
@@ -351,10 +352,6 @@ class Main(object):
                 print('Running with curses')
                 import bitmessagecurses
                 bitmessagecurses.runwrapper()
-            elif state.kivy:
-                config.remove_option('bitmessagesettings', 'dontconnect')
-                # from bitmessagekivy.mpybit import NavigateApp
-                # NavigateApp().run()
             else:
                 import bitmessageqt
                 bitmessageqt.run()
@@ -381,11 +378,7 @@ class Main(object):
             test_core_result = test_core.run()
             self.stop()
             test_core.cleanup()
-            sys.exit(
-                'Core tests failed!'
-                if test_core_result.errors or test_core_result.failures
-                else 0
-            )
+            sys.exit(not test_core_result.wasSuccessful())
 
     @staticmethod
     def daemonize():

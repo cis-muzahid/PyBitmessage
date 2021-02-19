@@ -12,6 +12,7 @@ from src.version import softwareVersion
 
 
 EXTRAS_REQUIRE = {
+    'docs': ['sphinx', 'sphinxcontrib-apidoc', 'm2r'],
     'gir': ['pygobject'],
     'json': ['jsonrpclib'],
     'notify2': ['notify2'],
@@ -20,8 +21,8 @@ EXTRAS_REQUIRE = {
     'qrcode': ['qrcode'],
     'sound;platform_system=="Windows"': ['winsound'],
     'tor': ['stem'],
-    'xml': ['defusedxml'],
-    'docs': ['sphinx', 'sphinxcontrib-apidoc', 'm2r']
+    'xdg': ['pyxdg'],
+    'xml': ['defusedxml']
 }
 
 
@@ -94,11 +95,14 @@ if __name__ == "__main__":
             ['desktop/icons/24x24/pybitmessage.png'])
     ]
 
-    if platform.dist()[0] in ('Debian', 'Ubuntu'):
-        data_files += [
-            ("etc/apparmor.d/",
-                ['packages/apparmor/pybitmessage'])
-        ]
+    try:
+        if platform.dist()[0] in ('Debian', 'Ubuntu'):
+            data_files += [
+                ("etc/apparmor.d/",
+                    ['packages/apparmor/pybitmessage'])
+            ]
+    except AttributeError:
+        pass  # FIXME: use distro for more recent python
 
     dist = setup(
         name='pybitmessage',
@@ -115,6 +119,7 @@ if __name__ == "__main__":
         #keywords='',
         install_requires=installRequires,
         tests_require=requirements,
+        test_suite='tests.unittest_discover',
         extras_require=EXTRAS_REQUIRE,
         classifiers=[
             "License :: OSI Approved :: MIT License"
@@ -152,6 +157,9 @@ if __name__ == "__main__":
             'bitmessage.indicator': [
                 'libmessaging ='
                 'pybitmessage.plugins.indicator_libmessaging [gir]'
+            ],
+            'bitmessage.desktop': [
+                'freedesktop = pybitmessage.plugins.desktop_xdg [xdg]'
             ],
             'bitmessage.proxyconfig': [
                 'stem = pybitmessage.plugins.proxyconfig_stem [tor]'
